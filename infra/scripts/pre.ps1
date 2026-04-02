@@ -26,7 +26,7 @@
     2. MICROSOFT GRAPH API INTEGRATION
        - Direct REST API calls using Invoke-RestMethod for advanced operations
        - Token acquisition using Get-AzAccessToken with proper scope handling
-       - Handles both SecureString (Az 14.0.0+) and plain string token formats for version compatibility
+       - Uses -AsSecureString to get tokens as SecureString (required for Az 14.0.0+ / Az.Accounts 4.0.0+)
        - Enables granular control over OAuth2 permission scopes and pre-authorized applications
 
     3. IDEMPOTENT DESIGN PATTERN
@@ -73,16 +73,12 @@ param(
 function Get-GraphAccessToken {
     Write-Host "  → Getting Microsoft Graph access token..."
     
-    $tokenObj = Get-AzAccessToken -Resource "https://graph.microsoft.com/"
+    $tokenObj = Get-AzAccessToken -Resource "https://graph.microsoft.com/" -AsSecureString
     
-    # Handle both SecureString (Az 14.0.0+) and plain string (older versions)
-    if ($tokenObj.Token -is [System.Security.SecureString]) {
-        $token = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto(
-            [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($tokenObj.Token)
-        )
-    } else {
-        $token = $tokenObj.Token
-    }
+    # Convert SecureString token to plain text for use in Authorization header
+    $token = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto(
+        [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($tokenObj.Token)
+    )
     
     return $token
 }
